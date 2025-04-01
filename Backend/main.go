@@ -1,14 +1,16 @@
-package main 
+package main
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"proyecto1/Analyzer"
 	"strings"
 
 	"github.com/rs/cors"
 )
+
 type Entrada struct {
 	Text string `json:"text"`
 }
@@ -18,9 +20,8 @@ type StatusResponse struct {
 	Type    string `json:"type"`
 }
 
-
 func main() {
-	//EndPoint 
+	//EndPoint
 	http.HandleFunc("/analizar", getCadenaAnalizar)
 
 	// Configurar CORS con opciones predeterminadas
@@ -36,11 +37,10 @@ func main() {
 
 }
 
-
 func getCadenaAnalizar(w http.ResponseWriter, r *http.Request) {
 	var respuesta string
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	var status StatusResponse
 	if r.Method == http.MethodPost {
 		var entrada Entrada
@@ -52,20 +52,20 @@ func getCadenaAnalizar(w http.ResponseWriter, r *http.Request) {
 		}
 		lector := bufio.NewScanner(strings.NewReader(entrada.Text))
 		for lector.Scan() {
-			if lector.Text() != ""{
+			if lector.Text() != "" {
 				linea := strings.Split(lector.Text(), "#") //comentarios
 				if len(linea[0]) != 0 {
 					respuesta += "Comando: " + linea[0] + "\n"
-					respuesta += "Parametro" 
-					respuesta += Analizar(linea[0])  + "\n"
-				}	
-				//Comentarios			
+					respuesta += "Parametro"
+					respuesta += Analyzer.Analyze(linea[0]) + "\n"
+				}
+				//Comentarios
 				if len(linea) > 1 && linea[1] != "" {
-					fmt.Println("#"+linea[1] +"\n")
-					respuesta += "#"+linea[1] +"\n"
+					fmt.Println("#" + linea[1] + "\n")
+					respuesta += "#" + linea[1] + "\n"
 				}
 			}
-			
+
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -78,38 +78,4 @@ func getCadenaAnalizar(w http.ResponseWriter, r *http.Request) {
 		status = StatusResponse{Message: "Metodo no permitido", Type: "unsucces"}
 		json.NewEncoder(w).Encode(status)
 	}
-}
-
-
-var re = regexp.MustCompile(`-(\w+)=("[^"]+"|\S+)`)
-
-
-
-func AnalyzeCommnad(command string, params string) {
-
-	if strings.Contains(command, "mkdisk") {
-		fn_mkdisk(params)
-	} else if strings.Contains(command, "fdisk") {
-		fn_fdisk(params)
-	} else if strings.Contains(command, "rmdisk") {
-		fn_rmdisk(params)
-	} else if strings.Contains(command, "mounted") {
-		DiskManagement.PrintMountedPartitions()
-	} else if strings.Contains(command, "mount") {
-		fn_mount(params)
-
-	} else if strings.Contains(command, "mkfs") {
-		fn_mkfs(params)
-	} else if strings.Contains(command, "login") {
-		fn_login(params)
-	} else if strings.Contains(command, "rep") {
-		fn_rep(params)
-	} else if strings.Contains(command, "mkfile") {
-		// Implementar la función mkfile aquí
-	} else if strings.Contains(command, "cat") {
-		// Implementar la función cat aquí
-	} else {
-		fmt.Println("Error: Commando invalido o no encontrado")
-	}
-
 }
