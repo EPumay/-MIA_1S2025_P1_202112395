@@ -38,3 +38,13 @@ type Partition struct {
 func (p *Partition) GetEnd() int32 {
 	return p.Start + p.Size
 }
+
+type EBR struct {
+	Status [1]byte //part_mount (si esta montada)
+	Type   [1]byte
+	Fit    [1]byte  //part_fit
+	Start  int32    //part_start
+	Size   int32    //part_s
+	Name   [16]byte //part_name
+	Next   int32    //part_next
+}
