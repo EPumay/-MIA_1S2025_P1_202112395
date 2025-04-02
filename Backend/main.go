@@ -24,14 +24,11 @@ func main() {
 	//EndPoint
 	http.HandleFunc("/analizar", getCadenaAnalizar)
 
-	// Configurar CORS con opciones predeterminadas
-	//Permisos para enviar y recir informacion
 	c := cors.Default()
 
 	// Configurar el manejador HTTP con CORS
 	handler := c.Handler(http.DefaultServeMux)
 
-	// Iniciar el servidor en el puerto 8080
 	fmt.Println("Servidor escuchando en http://localhost:8080")
 	http.ListenAndServe(":8080", handler)
 
@@ -55,8 +52,6 @@ func getCadenaAnalizar(w http.ResponseWriter, r *http.Request) {
 			if lector.Text() != "" {
 				linea := strings.Split(lector.Text(), "#") //comentarios
 				if len(linea[0]) != 0 {
-					respuesta += "Comando: " + linea[0] + "\n"
-					respuesta += "Parametro"
 					respuesta += Analyzer.Analyze(linea[0]) + "\n"
 				}
 				//Comentarios

@@ -3,6 +3,7 @@ package DiskManagement
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"proyecto1/Structs"
 	"proyecto1/Utilities"
 	"time"
@@ -80,4 +81,61 @@ func Mkdisk(size int, fit string, unit string, path string) string {
 	defer file.Close()
 
 	return respuesta
+}
+
+func Rmdisk(path string) (respuesta string) {
+	fmt.Println("*************Inicio RMDISK*************")
+	fmt.Println("Path: ", path)
+
+	// Verificar si el archivo existe primero
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println("Error: El archivo no existe")
+		return "Error: El disco no existe"
+	}
+
+	// Eliminar el archivo
+	err := os.Remove(path)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return "Error: " + err.Error()
+	}
+	fmt.Println("*************Fin RMDISK*************")
+	return "El disco ha sido eliminado"
+
+}
+
+func Fdisk(size int, path string, name string, unit string, type_ string, fit string) (respuesta string) {
+	fmt.Println("*************Inicio FDISK*************")
+	fmt.Println("Tamaño: ", size)
+	fmt.Println("Unidad: ", unit)
+	fmt.Println("Ruta: ", path)
+	fmt.Println("Nombre: ", name)
+	fmt.Println("Ajuste: ", fit)
+
+	if unit == "k" {
+		size = size * 1024
+	} else if unit == "m" {
+		size = size * 1024 * 1024
+	}
+	// Verificar si el archivo existe primero
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println("Error: El archivo no existe")
+		return "Error: El disco no existe"
+	}
+
+	// Abrir el archivo
+	file, err := Utilities.OpenFile(path)
+	if err != nil {
+		return err.Error()
+	}
+	defer file.Close()
+
+	// Leer el MBR
+	var mbr Structs.MBR
+	err = Utilities.ReadObject(file, &mbr, 0)
+	if err != nil {
+		return "Error al leer el MBR"
+
+	}
+
 }

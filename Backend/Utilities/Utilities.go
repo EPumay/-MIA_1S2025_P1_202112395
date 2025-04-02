@@ -47,3 +47,13 @@ func WriteObject(file *os.File, data interface{}, position int64) error {
 	}
 	return nil
 }
+
+func ReadObject(file *os.File, data interface{}, position int64) error {
+	file.Seek(position, 0)
+	err := binary.Read(file, binary.LittleEndian, data)
+	if err != nil {
+		fmt.Println("Err ReadObject==", err)
+		return err
+	}
+	return nil
+}
