@@ -47,6 +47,10 @@ func AnalyzeCommnad(command string, params string) string {
 	} else if strings.Contains(command, "fdisk") {
 		fmt.Print("Comando: fdisk\n")
 		respuesta = fn_fdisk(params)
+	} else if strings.Contains(command, "mounted") {
+		fmt.Print("Comando: mounted\n")
+		respuesta = DiskManagement.GetMountedPartitions()
+		print(respuesta)
 	} else if strings.Contains(command, "mount") {
 		fmt.Print("Comando: mount\n")
 	}
@@ -222,11 +226,13 @@ func fn_mount(params string) {
 	matches := re.FindAllStringSubmatch(params, -1)
 
 	for _, match := range matches {
-		flagName := match[1]
-		flagValue := strings.ToLower(match[2]) // Convertir todo a minúsculas
+		flagName := strings.ToLower(match[1]) // Convertir a minúsculas
+		flagValue := match[2]                 // Obtener el valor de la flag
 		flagValue = strings.Trim(flagValue, "\"")
 		fs.Set(flagName, flagValue)
 	}
+
+	*name = strings.ToLower(*name)
 
 	if *path == "" || *name == "" {
 		fmt.Println("Error: Path y Name son obligatorios")
