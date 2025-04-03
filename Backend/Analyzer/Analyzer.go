@@ -53,6 +53,7 @@ func AnalyzeCommnad(command string, params string) string {
 		print(respuesta)
 	} else if strings.Contains(command, "mount") {
 		fmt.Print("Comando: mount\n")
+		respuesta = fn_mount(params)
 	}
 	return respuesta
 }
@@ -217,7 +218,7 @@ func fn_fdisk(input string) (respuesta string) {
 	return respuesta
 }
 
-func fn_mount(params string) {
+func fn_mount(params string) (respuesta string) {
 	fs := flag.NewFlagSet("mount", flag.ExitOnError)
 	path := fs.String("path", "", "Ruta")
 	name := fs.String("name", "", "Nombre de la partición")
@@ -239,6 +240,6 @@ func fn_mount(params string) {
 		return
 	}
 
-	//DiskManagement.Mount(*path, lowercaseName)
-
+	respuesta = DiskManagement.Mount(*path, *name)
+	return respuesta
 }
