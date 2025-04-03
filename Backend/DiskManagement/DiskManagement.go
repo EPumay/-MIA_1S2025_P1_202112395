@@ -194,12 +194,12 @@ func Fdisk(size int, path string, name string, unit string, type_ string, fit st
 					// Inicializar el primer EBR en la partición extendida
 					ebrStart := gap // El primer EBR se coloca al inicio de la partición extendida
 					ebr := Structs.EBR{
-						PartFit:   fit[0],
-						PartStart: ebrStart,
-						PartSize:  0,
-						PartNext:  -1,
+						Fit:   fit[0],
+						Start: ebrStart,
+						Size:  0,
+						Next:  -1,
 					}
-					copy(ebr.PartName[:], "")
+					copy(ebr.Name[:], "")
 					Utilities.WriteObject(file, ebr, int64(ebrStart))
 				}
 
@@ -215,28 +215,28 @@ func Fdisk(size int, path string, name string, unit string, type_ string, fit st
 				var ebr Structs.EBR
 				for {
 					Utilities.ReadObject(file, &ebr, int64(ebrPos))
-					if ebr.PartNext == -1 {
+					if ebr.Next == -1 {
 						break
 					}
-					ebrPos = ebr.PartNext
+					ebrPos = ebr.Next
 				}
 
 				// Calcular la posición de inicio de la nueva partición lógica
-				newEBRPos := ebr.PartStart + ebr.PartSize                    // El nuevo EBR se coloca después de la partición lógica anterior
+				newEBRPos := ebr.Start + ebr.Size                            // El nuevo EBR se coloca después de la partición lógica anterior
 				logicalPartitionStart := newEBRPos + int32(binary.Size(ebr)) // El inicio de la partición lógica es justo después del EBR
 
 				// Ajustar el siguiente EBR
-				ebr.PartNext = newEBRPos
+				ebr.Next = newEBRPos
 				Utilities.WriteObject(file, ebr, int64(ebrPos))
 
 				// Crear y escribir el nuevo EBR
 				newEBR := Structs.EBR{
-					PartFit:   fit[0],
-					PartStart: logicalPartitionStart,
-					PartSize:  int32(size),
-					PartNext:  -1,
+					Fit:   fit[0],
+					Start: logicalPartitionStart,
+					Size:  int32(size),
+					Next:  -1,
 				}
-				copy(newEBR.PartName[:], name)
+				copy(newEBR.Name[:], name)
 				Utilities.WriteObject(file, newEBR, int64(newEBRPos))
 
 				// Imprimir el nuevo EBR creado
@@ -254,10 +254,10 @@ func Fdisk(size int, path string, name string, unit string, type_ string, fit st
 						break
 					}
 					Structs.PrintEBR(ebr)
-					if ebr.PartNext == -1 {
+					if ebr.Next == -1 {
 						break
 					}
-					ebrPos = ebr.PartNext
+					ebrPos = ebr.Next
 				}
 
 				break
@@ -288,4 +288,15 @@ func Fdisk(size int, path string, name string, unit string, type_ string, fit st
 	fmt.Println("======FIN FDISK======")
 	fmt.Println("")
 
+	respuesta = "Comando: FDISK\n"
+	respuesta += "Tamaño: " + fmt.Sprint(size) + "\n"
+	respuesta += "Unidad: " + unit + "\n"
+	respuesta += "Ruta: " + path + "\n"
+	respuesta += "Nombre: " + name + "\n"
+	respuesta += "Ajuste: " + fit + "\n"
+	respuesta += "-------------------------------------\n"
+	respuesta += "Partición creada con éxito\n"
+	respuesta += "-------------------------------------\n"
+	respuesta += "Fin FDISK\n"
+	return respuesta
 }

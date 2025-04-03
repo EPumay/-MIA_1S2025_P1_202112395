@@ -25,14 +25,14 @@ func GetIdMBR(m MBR) int32 {
 }
 
 type Partition struct {
-	Status      [1]byte  //part_status 	Activa/Inactiva
-	Type        [1]byte  //part_type 	Primaria/Extendida
-	Fit         [1]byte  //part_fit 	Best/FIst/Wors
-	Start       int32    //part_start
-	Size        int32    //part_s
-	Name        [16]byte //part_name
-	Correlative int32    //part_correlative
-	Id          [4]byte  //part_id
+	Status      [1]byte //
+	Type        [1]byte // P o E
+	Fit         [1]byte // B, F o W
+	Start       int32   // byte donde inicia la partición
+	Size        int32   //
+	Name        [16]byte
+	Correlative int32 //desde -1
+	Id          [4]byte
 }
 
 func (p *Partition) GetEnd() int32 {
@@ -42,9 +42,19 @@ func (p *Partition) GetEnd() int32 {
 type EBR struct {
 	Status [1]byte //part_mount (si esta montada)
 	Type   [1]byte
-	Fit    [1]byte  //part_fit
+	Fit    byte     //part_fit
 	Start  int32    //part_start
 	Size   int32    //part_s
 	Name   [16]byte //part_name
 	Next   int32    //part_next
+}
+
+func PrintEBR(data EBR) {
+	fmt.Println(fmt.Sprintf("Name: %s, fit: %c, start: %d, size: %d, next: %d, mount: %c",
+		string(data.Name[:]),
+		data.Fit,
+		data.Start,
+		data.Size,
+		data.Next,
+		data.Status))
 }

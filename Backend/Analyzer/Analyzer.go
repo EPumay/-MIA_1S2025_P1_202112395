@@ -49,7 +49,6 @@ func AnalyzeCommnad(command string, params string) string {
 		respuesta = fn_fdisk(params)
 	} else if strings.Contains(command, "mount") {
 		fmt.Print("Comando: mount\n")
-		respuesta = fn_mount(params)
 	}
 	return respuesta
 }
@@ -144,7 +143,7 @@ func fn_fdisk(input string) (respuesta string) {
 	size := fs.Int("size", 0, "Tamaño")
 	path := fs.String("path", "", "Ruta")
 	name := fs.String("name", "", "Nombre")
-	unit := fs.String("unit", "m", "Unidad")
+	unit := fs.String("unit", "k", "Unidad")
 	type_ := fs.String("type", "p", "Tipo")
 	fit := fs.String("fit", "", "Ajuste")
 
@@ -156,8 +155,8 @@ func fn_fdisk(input string) (respuesta string) {
 
 	// Procesar el input
 	for _, match := range matches {
-		flagName := match[1]
-		flagValue := strings.ToLower(match[2])
+		flagName := strings.ToLower(match[1]) // Convertir a minúsculas
+		flagValue := match[2]                 // Obtener el valor de la flag
 
 		flagValue = strings.Trim(flagValue, "\"")
 
@@ -174,6 +173,7 @@ func fn_fdisk(input string) (respuesta string) {
 	*unit = strings.ToLower(*unit)
 	*type_ = strings.ToLower(*type_)
 	*fit = strings.ToLower(*fit)
+	fmt.Print(*fit)
 
 	// Validaciones
 	if *size <= 0 {
@@ -192,15 +192,15 @@ func fn_fdisk(input string) (respuesta string) {
 		*fit = "w"
 	}
 
-	// Validar fit (b/w/f)
-	if *fit != "b" && *fit != "f" && *fit != "w" {
-		fmt.Println("Error: Fit must be 'b', 'f', or 'w'")
-		return "Error: Fit must be 'b', 'f', or 'w'"
+	if *fit != "bf" && *fit != "ff" && *fit != "wf" {
+		fmt.Println("Error: Fit must be 'bf', 'ff', or 'wf'")
+		respuesta = "Error: Fit must be 'bf', 'ff', or 'wf'"
+		return respuesta
 	}
 
-	if *unit != "k" && *unit != "m" {
-		fmt.Println("Error: Unit must be 'k' or 'm'")
-		return "Error: Unit must be 'k' or 'm'"
+	if *unit != "k" && *unit != "m" && *unit != "b" {
+		fmt.Println("Error: Unit must be 'k', 'm', or 'b'")
+		return "Error: Unit must be 'k' or 'm' or 'b'"
 	}
 
 	if *type_ != "p" && *type_ != "e" && *type_ != "l" {
@@ -233,6 +233,6 @@ func fn_mount(params string) {
 		return
 	}
 
-	lowercaseName := strings.ToLower(*name)
-	DiskManagement.Mount(*path, lowercaseName)
+	//DiskManagement.Mount(*path, lowercaseName)
+
 }
