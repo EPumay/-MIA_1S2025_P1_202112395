@@ -4,7 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"proyecto1/DiskManagement"
+	"proyecto1/FileSystem"
+	"proyecto1/Structs"
+	"proyecto1/User"
+	"proyecto1/Utilities"
 	"regexp"
 	"strings"
 )
@@ -49,11 +55,19 @@ func AnalyzeCommnad(command string, params string) string {
 		respuesta = fn_fdisk(params)
 	} else if strings.Contains(command, "mounted") {
 		fmt.Print("Comando: mounted\n")
-		respuesta = DiskManagement.GetMountedPartitions()
+		respuesta = DiskManagement.Mounted()
 		print(respuesta)
 	} else if strings.Contains(command, "mount") {
 		fmt.Print("Comando: mount\n")
 		respuesta = fn_mount(params)
+	} else if strings.Contains(command, "rep") {
+		respuesta = fn_rep(params)
+	} else if strings.Contains(command, "login") {
+		fmt.Print("Comando: login\n")
+		respuesta = fn_logn(params)
+	} else if strings.Contains(command, "mkfs") {
+		fmt.Print("Comando: mkfs\n")
+		respuesta = fn_mkfs(params)
 	}
 	return respuesta
 }
@@ -150,7 +164,7 @@ func fn_fdisk(input string) (respuesta string) {
 	name := fs.String("name", "", "Nombre")
 	unit := fs.String("unit", "k", "Unidad")
 	type_ := fs.String("type", "p", "Tipo")
-	fit := fs.String("fit", "", "Ajuste")
+	fit := fs.String("fit", "wf", "Ajuste")
 
 	// Parsear los flags
 	fs.Parse(os.Args[1:])
@@ -241,5 +255,274 @@ func fn_mount(params string) (respuesta string) {
 	}
 
 	respuesta = DiskManagement.Mount(*path, *name)
+	return respuesta
+}
+
+func fn_rep(input string) (respuesta string) {
+	fs := flag.NewFlagSet("rep", flag.ExitOnError)
+	name := fs.String("name", "", "Nombre del reporte a generar (mbr, disk, inode, block, bm_inode, bm_block, sb, file, ls)")
+	path := fs.String("path", "", "Ruta donde se generará el reporte")
+	id := fs.String("id", "", "ID de la partición")
+	pathFileLs := fs.String("path_file_ls", "", "Nombre del archivo o carpeta para reportes file o ls") // Parámetro opcional
+
+	// Parsear los parámetros de entrada
+	matches := re.FindAllStringSubmatch(input, -1)
+	for _, match := range matches {
+		flagName := strings.ToLower(match[1]) // Convertir a minúsculas
+		flagValue := strings.Trim(match[2], "\"")
+
+		switch flagName {
+		case "name", "path", "id", "path_file_ls":
+			fs.Set(flagName, flagValue)
+		default:
+			fmt.Println("Error: Flag no encontrada:", flagName)
+		}
+	}
+
+	*name = strings.ToLower(*name)
+	*id = strings.ToLower(*id)
+
+	// Verificar los parámetros obligatorios
+	if *name == "" || *path == "" || *id == "" {
+		fmt.Println("Error: 'name', 'path' y 'id' son parámetros obligatorios.")
+		return "Error: 'name', 'path' y 'id' son parámetros obligatorios."
+	}
+
+	// Verificar si el disco está montado usando DiskManagement
+	mounted := false
+	var diskPath string
+	for _, partitions := range DiskManagement.GetMountedPartitions() {
+		for _, partition := range partitions {
+			if partition.Id == *id {
+				mounted = true
+				diskPath = partition.Path
+				break
+			}
+		}
+	}
+
+	if !mounted {
+		fmt.Println("Error: La partición con ID", *id, "no está montada.")
+		return "Error: La partición con ID " + *id + " no está montada."
+	}
+
+	// Crear la carpeta si no existe
+	reportsDir := filepath.Dir(*path)
+	err := os.MkdirAll(reportsDir, os.ModePerm)
+	if err != nil {
+		fmt.Println("Error al crear la carpeta:", reportsDir)
+		return "Error al crear la carpeta: " + reportsDir
+	}
+
+	// Generar el reporte según el tipo de reporte solicitado
+	switch *name {
+	case "mbr":
+		// Abrir el archivo binario del disco montado
+		file, err := Utilities.OpenFile(diskPath)
+		if err != nil {
+			fmt.Println("Error: No se pudo abrir el archivo en la ruta:", diskPath)
+			return "Error: No se pudo abrir el archivo en la ruta: " + diskPath
+		}
+		defer file.Close()
+
+		// Leer el objeto MBR desde el archivo binario
+		var TempMBR Structs.MBR
+		if err := Utilities.ReadObject(file, &TempMBR, 0); err != nil {
+			fmt.Println("Error: No se pudo leer el MBR desde el archivo")
+			return "Error: No se pudo leer el MBR desde el archivo"
+		}
+
+		// Leer y procesar los EBRs si hay particiones extendidas
+		var ebrs []Structs.EBR
+		for i := 0; i < 4; i++ {
+			if string(TempMBR.Partitions[i].Type[:]) == "e" { // Partición extendida
+				fmt.Println("Partición extendida encontrada: ", string(TempMBR.Partitions[i].Name[:]))
+
+				// El primer EBR está al inicio de la partición extendida
+				ebrPosition := TempMBR.Partitions[i].Start
+				ebrCounter := 1
+
+				// Leer todos los EBRs dentro de la partición extendida
+				for ebrPosition != -1 {
+					fmt.Printf("Leyendo EBR en posición: %d\n", ebrPosition)
+					var tempEBR Structs.EBR
+					if err := Utilities.ReadObject(file, &tempEBR, int64(ebrPosition)); err != nil {
+						fmt.Println("Error: No se pudo leer el EBR desde el archivo")
+						break
+					}
+
+					// Añadir el EBR a la lista
+					ebrs = append(ebrs, tempEBR)
+					fmt.Printf("EBR %d leído. Start: %d, Size: %d, Next: %d, Name: %s\n", ebrCounter, tempEBR.Start, tempEBR.Size, tempEBR.Next, string(tempEBR.Name[:]))
+
+					// Depuración: Mostrar el EBR leído
+					Structs.PrintEBR(tempEBR)
+
+					// Mover a la siguiente posición de EBR
+					ebrPosition = tempEBR.Next
+					ebrCounter++
+
+					// Si no hay más EBRs, salir del bucle
+					if ebrPosition == -1 {
+						fmt.Println("No hay más EBRs en esta partición extendida.")
+					}
+				}
+			}
+		}
+
+		// Generar el archivo .dot del MBR con EBRs
+		reportPath := *path
+		if err := Utilities.GenerateMBRReport(TempMBR, ebrs, reportPath, file); err != nil {
+			fmt.Println("Error al generar el reporte MBR:", err)
+		} else {
+			fmt.Println("Reporte MBR generado exitosamente en:", reportPath)
+
+			// Renderizar el archivo .dot a .jpg usando Graphviz
+			dotFile := strings.TrimSuffix(reportPath, filepath.Ext(reportPath)) + ".dot"
+			fmt.Println(dotFile)
+			outputJpg := reportPath
+			cmd := exec.Command("dot", "-Tjpg", dotFile, "-o", outputJpg)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("Error al renderizar el archivo .dot a imagen:", err)
+			} else {
+				fmt.Println("Imagen generada exitosamente en:", outputJpg)
+			}
+		}
+
+	//CASE PARA EL REPORTE DISK
+	case "disk":
+		// Abrir el archivo binario del disco montado
+		file, err := Utilities.OpenFile(diskPath)
+		if err != nil {
+			fmt.Println("Error: No se pudo abrir el archivo en la ruta:", diskPath)
+			return "Error: No se pudo abrir el archivo en la ruta: " + diskPath
+		}
+		defer file.Close()
+
+		// Leer el objeto MBR desde el archivo binario
+		var TempMBR Structs.MBR
+		if err := Utilities.ReadObject(file, &TempMBR, 0); err != nil {
+			fmt.Println("Error: No se pudo leer el MBR desde el archivo")
+			return "Error: No se pudo leer el MBR desde el archivo"
+		}
+
+		// Leer y procesar los EBRs si hay particiones extendidas
+		var ebrs []Structs.EBR
+		for i := 0; i < 4; i++ {
+			if string(TempMBR.Partitions[i].Type[:]) == "e" { // Partición extendida
+				ebrPosition := TempMBR.Partitions[i].Start
+				for ebrPosition != -1 {
+					var tempEBR Structs.EBR
+					if err := Utilities.ReadObject(file, &tempEBR, int64(ebrPosition)); err != nil {
+						break
+					}
+					ebrs = append(ebrs, tempEBR)
+					ebrPosition = tempEBR.Next
+				}
+			}
+		}
+
+		// Calcular el tamaño total del disco
+		totalDiskSize := TempMBR.MbrSize
+
+		// Generar el archivo .dot del DISK
+		reportPath := *path
+		if err := Utilities.GenerateDiskReport(TempMBR, ebrs, reportPath, file, totalDiskSize); err != nil {
+			fmt.Println("Error al generar el reporte DISK:", err)
+		} else {
+			fmt.Println("Reporte DISK generado exitosamente en:", reportPath)
+
+			// Renderizar el archivo .dot a .jpg usando Graphviz
+			dotFile := strings.TrimSuffix(reportPath, filepath.Ext(reportPath)) + ".dot"
+			outputJpg := reportPath
+			cmd := exec.Command("dot", "-Tjpg", dotFile, "-o", outputJpg)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println("Error al renderizar el archivo .dot a imagen:", err)
+			} else {
+				fmt.Println("Imagen generada exitosamente en:", outputJpg)
+			}
+		}
+
+	case "file", "ls":
+		// Para los reportes "file" y "ls", pathFileLs es obligatorio
+		if *pathFileLs == "" {
+			fmt.Println("Error: 'path_file_ls' es obligatorio para los reportes 'file' y 'ls'.")
+			return "Error: 'path_file_ls' es obligatorio para los reportes 'file' y 'ls'."
+		}
+
+		// Lógica para generar los reportes de tipo 'file' y 'ls'
+		fmt.Println("Generando reporte", *name, "con archivo/carpeta:", *pathFileLs)
+		// Aquí iría la lógica adicional para generar estos reportes
+
+	default:
+		fmt.Println("Error: Tipo de reporte no válido.")
+	}
+	respuesta = "Reporte generado exitosamente"
+	if *name == "mbr" || *name == "disk" {
+		respuesta = "Reporte " + *name + " generado exitosamente en: " + *path
+	} else if *name == "file" || *name == "ls" {
+		respuesta = "Reporte " + *name + " generado exitosamente con archivo/carpeta: " + *pathFileLs
+	} else {
+		respuesta = "Error: Tipo de reporte no válido."
+	}
+
+	return respuesta
+}
+
+func fn_logn(input string) (respuesta string) {
+	fs := flag.NewFlagSet("login", flag.ExitOnError)
+	user := fs.String("user", "", "Usuario")
+	pass := fs.String("pass", "", "Contraseña")
+	id := fs.String("id", "", "ID de la partición")
+
+	fs.Parse(os.Args[1:])
+	matches := re.FindAllStringSubmatch(input, -1)
+	for _, match := range matches {
+		flagName := strings.ToLower(match[1])  // Convertir a minúsculas
+		flagValue := strings.ToLower(match[2]) // Obtener el valor de la flag
+		flagValue = strings.Trim(flagValue, "\"")
+		switch flagName {
+		case "user", "pass", "id":
+			fs.Set(flagName, flagValue)
+		default:
+			fmt.Println("Error: Flag no encontrada")
+		}
+	}
+
+	//verificar que esten los parametros
+	if *user == "" || *pass == "" || *id == "" {
+		fmt.Println("Error: 'user', 'pass' y 'id' son parámetros obligatorios.")
+		return "Error: 'user', 'pass' y 'id' son parámetros obligatorios."
+	}
+	respuesta = User.Login(*user, *pass, *id)
+	return respuesta
+
+}
+
+func fn_mkfs(input string) (respuesta string) {
+	fs := flag.NewFlagSet("mkfs", flag.ExitOnError)
+	id := fs.String("id", "", "ID de la partición")
+	type_ := fs.String("type", "full", "Tipo de formateo")
+	fs.Parse(os.Args[1:])
+	matches := re.FindAllStringSubmatch(input, -1)
+	for _, match := range matches {
+		flagName := strings.ToLower(match[1])  // Convertir a minúsculas
+		flagValue := strings.ToLower(match[2]) // Obtener el valor de la flag
+		flagValue = strings.Trim(flagValue, "\"")
+		switch flagName {
+		case "id":
+			fs.Set(flagName, flagValue)
+		default:
+			fmt.Println("Error: Flag no encontrada")
+		}
+	}
+	if *id == "" {
+		fmt.Println("Error: ID es obligatorio")
+		return
+	}
+	fmt.Println("type", *type_)
+	respuesta = FileSystem.Mkfs(*id)
 	return respuesta
 }

@@ -314,7 +314,7 @@ type MountedPartition struct {
 
 var mountedPartitions = make(map[string][]MountedPartition)
 
-func getMountedPartitions() map[string][]MountedPartition {
+func GetMountedPartitions() map[string][]MountedPartition {
 	return mountedPartitions
 }
 
@@ -395,6 +395,7 @@ func Mount(path string, name string) (respuesta string) {
 		Id:     partitionID,
 		Status: '1',
 	})
+	Structs.AddMontadas(partitionID, path) // Agregar a la lista de montadas
 	// Escribir el MBR actualizado al archivo
 	if err := Utilities.WriteObject(file, TempMBR, 0); err != nil {
 		fmt.Println("Error: No se pudo sobrescribir el MBR en el archivo")
@@ -432,7 +433,7 @@ func generateDiskID(path string) string {
 	return strings.ToLower(path)
 }
 
-func GetMountedPartitions() string {
+func Mounted() string {
 	var result strings.Builder
 	result.WriteString("\n=== Particiones Montadas ===\n")
 
