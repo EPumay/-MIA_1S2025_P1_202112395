@@ -3,10 +3,13 @@ package Utilities
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"proyecto1/Structs"
 	"strings"
+	"unicode"
 )
 
 // Funcion para crear un archivo binario
@@ -241,4 +244,77 @@ func GenerateMBRReport(mbr Structs.MBR, ebrs []Structs.EBR, outputPath string, f
 
 	fmt.Println("Reporte MBR generado exitosamente en:", dotFilePath)
 	return nil
+}
+
+func Reporte(path string, contenido string) error {
+	//asegurar la ruta
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		fmt.Println("Error al crear el reporte, path: ", err)
+		return err
+	}
+	// Abrir o crear un archivo para escritura
+	file, err := os.Create(path)
+	if err != nil {
+		fmt.Println("Error al crear el archivo:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Escribir en el archivo
+	_, err = file.WriteString(contenido)
+	if err != nil {
+		fmt.Println("Error al escribir en el archivo:", err)
+		return err
+	}
+
+	return err
+}
+
+func RepGraphizMBR(path string, contenido string, nombre string) error {
+	//asegurar la ruta
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		fmt.Println("Error al crear el reporte, path: ", err)
+		return err
+	}
+	// Abrir o crear un archivo para escritura
+	file, err := os.Create(path)
+	if err != nil {
+		fmt.Println("Error al crear el archivo:", err)
+		return err
+	}
+	defer file.Close()
+
+	// Escribir en el archivo
+	_, err = file.WriteString(contenido)
+	if err != nil {
+		fmt.Println("Error al escribir en el archivo:", err)
+		return err
+	}
+
+	rep2 := dir + "/" + nombre + ".png"
+	cmd := exec.Command("dot", "-Tpng", path, "-o", rep2)
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf("Error al generar el reporte PNG: %v", err)
+	}
+
+	return err
+}
+
+func EliminartIlegibles(entrada string) string {
+	// Función de transformación que elimina caracteres no legibles
+	transformFunc := func(r rune) rune {
+		//unicode.IsPrint indica si es legible o no.
+		//si el caracter se puede leer, lo regresa, de lo contrario devuekve -1
+		if unicode.IsPrint(r) {
+			return r
+		}
+		return -1
+	}
+
+	// Aplicar la función de transformación a la cadena de entrada
+	salida := strings.Map(transformFunc, entrada)
+	return salida
 }

@@ -153,6 +153,25 @@ func SalirUsuario() {
 
 //Para almacenar la informacion del usuario con sesion iniciada
 
-//Valores por defecto al crear un objeto de esta estructura
-//Id = ""
-//Status = false -> false no hay sesion iniciada. true sesion iniciada
+// Valores por defecto al crear un objeto de esta estructura
+// Id = ""
+// Status = false -> false no hay sesion iniciada. true sesion iniciada
+type Bite struct {
+	Val [1]byte
+}
+
+func GetB_name(nombre string) string {
+	posicionNulo := strings.IndexByte(nombre, 0)
+
+	if posicionNulo != -1 {
+		if posicionNulo != 0 {
+			//tiene bytes nulos
+			nombre = nombre[:posicionNulo]
+		} else {
+			//el  nombre esta vacio
+			nombre = "-"
+		}
+
+	}
+	return nombre //-1 el nombre no tiene bytes nulos
+}

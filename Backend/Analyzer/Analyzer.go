@@ -68,7 +68,26 @@ func AnalyzeCommnad(command string, params string) string {
 	} else if strings.Contains(command, "mkfs") {
 		fmt.Print("Comando: mkfs\n")
 		respuesta = fn_mkfs(params)
+	} else if strings.Contains(command, "logout") {
+		fmt.Print("Comando: logout\n")
+		respuesta = User.Logout()
+	} else if strings.Contains(command, "mkdir") {
+		fmt.Print("Comando: mkdir\n")
+		parametros := strings.Split(params, "-")
+		respuesta = FileSystem.Mkdir(parametros)
+		fmt.Println(parametros)
+	} else if strings.Contains(command, "mkgrp") {
+		fmt.Print("Comando: mkgrp\n")
+	} else if strings.Contains(command, "mkfile") {
+		fmt.Print("Comando: mkfile\n")
+		parametros := strings.Split(params, "-")
+		respuesta = FileSystem.Mkfile(parametros)
+	} else if strings.Contains(command, "cat") {
+		fmt.Print("Comando: cat\n")
+		parametros := strings.Split(params, "-")
+		respuesta = FileSystem.Cat(parametros)
 	}
+
 	return respuesta
 }
 
@@ -445,28 +464,37 @@ func fn_rep(input string) (respuesta string) {
 			}
 		}
 
-	case "file", "ls":
-		// Para los reportes "file" y "ls", pathFileLs es obligatorio
-		if *pathFileLs == "" {
-			fmt.Println("Error: 'path_file_ls' es obligatorio para los reportes 'file' y 'ls'.")
-			return "Error: 'path_file_ls' es obligatorio para los reportes 'file' y 'ls'."
-		}
+	case "inode":
+		//llamada a la funcion para generar el reporte de inodo
+		fmt.Println("Generando reporte de inodo")
+	case "bm_inode":
+		//llamada a la funcion para generar el reporte de bitmap de inodo
+		fmt.Println("Generando reporte de bitmap de inodo")
+		respuesta = FileSystem.BM_inode(*path, *id)
 
-		// Lógica para generar los reportes de tipo 'file' y 'ls'
-		fmt.Println("Generando reporte", *name, "con archivo/carpeta:", *pathFileLs)
-		// Aquí iría la lógica adicional para generar estos reportes
+	case "bm_block":
+		fmt.Println("Generando reporte de bitmap de bloque")
+		respuesta = FileSystem.BM_Bloque(*path, *id)
+	case "sb":
+		//llamada a la funcion para generar el reporte de super bloque
+		fmt.Println("Generando reporte de super bloque")
+		respuesta = FileSystem.SuperBloque(*path, *id)
+	case "block":
+		//llamada a la funcion para generar el reporte de bloque
+		fmt.Println("Generando reporte de bloque")
+	case "file":
+		//llamada a la funcion para generar el reporte de bloque
+		fmt.Println("Generando reporte de bloque")
+		respuesta = FileSystem.FILE(*path, *id, *pathFileLs)
+	case "ls":
+		//llamada a la funcion para generar el reporte de bloque
+		fmt.Println("Generando reporte de bloque")
+		respuesta = FileSystem.LS(*path, *id, *pathFileLs)
 
 	default:
 		fmt.Println("Error: Tipo de reporte no válido.")
 	}
 	respuesta = "Reporte generado exitosamente"
-	if *name == "mbr" || *name == "disk" {
-		respuesta = "Reporte " + *name + " generado exitosamente en: " + *path
-	} else if *name == "file" || *name == "ls" {
-		respuesta = "Reporte " + *name + " generado exitosamente con archivo/carpeta: " + *pathFileLs
-	} else {
-		respuesta = "Error: Tipo de reporte no válido."
-	}
 
 	return respuesta
 }
@@ -513,6 +541,8 @@ func fn_mkfs(input string) (respuesta string) {
 		flagValue = strings.Trim(flagValue, "\"")
 		switch flagName {
 		case "id":
+			fs.Set(flagName, flagValue)
+		case "type":
 			fs.Set(flagName, flagValue)
 		default:
 			fmt.Println("Error: Flag no encontrada")
